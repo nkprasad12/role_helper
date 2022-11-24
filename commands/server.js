@@ -5,17 +5,29 @@ function getRole(guild, roleName) {
         role => role.name.localeCompare(roleName, undefined, { sensitivity: 'base' }) === 0)
 }
 
+function formatMember(member) {
+    return `${member.displayName} [${member.user.tag}]`
+}
+
 function formatMembers(members) {
-    return members.map(member => `${member.displayName} [${member.user.tag}]`).join('\n')
+    return members.map(formatMember).join('\n')
 }
 
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('server')
+        .addStringOption(option =>
+            option.setName('include')
+                .setDescription('Name of roless to include (separate with commas)')
+                .setRequired(true))
+        .addStringOption(option =>
+            option.setName('exclude')
+                .setDescription('Names of roles to include (separate with commas)')
+                .setRequired(true))
 		.setDescription('Provides information about the server.'),
 	async execute(interaction) {
-        const allowRoles = ["Civis"]
-        const filterRoles = ["Eques"]
+        const allowRoles = interaction.options.getString('include').split(',').map(s => s.trim())
+        const filterRoles = interaction.options.getString('exclude').split(',').map(s => s.trim())
 
         const filterIds = new Set()
         for (const roleName of filterRoles) {
@@ -36,22 +48,17 @@ module.exports = {
                 await interaction.reply(`Could not find any role with name ${roleName}`);
                 return
             }
-            for (const member of role.members) {
+            role.members.forEach(member => {
                 if (filterIds.has(member.id)) {
-                    continue
+                    return
                 }
-                allowedUsers.push(member)
-            }          
+                allowedUsers.push(member)                
+            });       
         }
 
         message = `Users with ${allowRoles.join('and')} but not ${filterRoles.join('or')}:\n`
-        for (const member of allowedUsers) {
-            console.log(member)
-            console.log(member.displayName)
-            console.log(member.user)
-            console.log('\n')
-        }
+        message += formatMembers(allowedUsers)
     
-		await interaction.reply(message);
+		await interaction.reply({ content: message, ephemeral: true});
 	},
 };
