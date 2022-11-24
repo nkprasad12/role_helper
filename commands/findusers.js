@@ -15,19 +15,19 @@ function formatMembers(members) {
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('server')
+		.setName('findusers')
         .addStringOption(option =>
-            option.setName('include')
-                .setDescription('Name of roless to include (separate with commas)')
+            option.setName('with')
+                .setDescription('Name of roles to include (separate with commas)')
                 .setRequired(true))
         .addStringOption(option =>
-            option.setName('exclude')
+            option.setName('without')
                 .setDescription('Names of roles to include (separate with commas)')
                 .setRequired(true))
-		.setDescription('Provides information about the server.'),
+		.setDescription('Allows finding users by role.'),
 	async execute(interaction) {
-        const allowRoles = interaction.options.getString('include').split(',').map(s => s.trim())
-        const filterRoles = interaction.options.getString('exclude').split(',').map(s => s.trim())
+        const allowRoles = interaction.options.getString('with').split(',').map(s => s.trim())
+        const filterRoles = interaction.options.getString('without').split(',').map(s => s.trim())
 
         const filterIds = new Set()
         for (const roleName of filterRoles) {
@@ -36,9 +36,9 @@ module.exports = {
                 await interaction.reply(`Could not find any role with name ${roleName}`);
                 return
             }
-            for (const member of role.members) {
+            role.members.forEach(member => {
                 filterIds.add(member.id)
-            }          
+            });      
         }
 
         const allowedUsers = []
@@ -56,7 +56,9 @@ module.exports = {
             });       
         }
 
-        message = `Users with ${allowRoles.join('and')} but not ${filterRoles.join('or')}:\n`
+        allowed = allowRoles.join('and')
+        filtered = filterRoles.join('or')
+        message = `Found ${allowedUsers.length} users with ${allowed} but not ${filtered}:\n`
         message += formatMembers(allowedUsers)
     
 		await interaction.reply({ content: message, ephemeral: true});
