@@ -14,11 +14,15 @@ function formatMember(member) {
 }
 
 function formatMembers(members) {
-    return members.map(formatMember).join('\n')
+    return members.map(formatMember).join('\n') + `\nAll Tags:\n${members.map(member => member.id).join(",")}`
 }
 
 function parseListOption(interaction, key) {
-    return interaction.options.getString(key).split(',').map(s => s.trim())
+    const rawValue = interaction.options.getString(key);
+    if (rawValue === null) {
+        return [];
+    }
+    return rawValue.split(',').map(s => s.trim())
 }
 
 
@@ -32,7 +36,7 @@ module.exports = {
         .addStringOption(option =>
             option.setName(OPTION_WITHOUT)
                 .setDescription('Names of roles to include (separate with commas)')
-                .setRequired(true))
+                .setRequired(false))
         .setDescription('Allows finding users by role.'),
 
     async execute(interaction) {
@@ -67,9 +71,13 @@ module.exports = {
             })
         }
 
-        allowed = rolesToAllow.join('and')
-        filtered = rolesToFilter.join('or')
-        message = `Found ${filteredUsers.length} users with ${allowed} but not ${filtered}:\n`
+        allowed = rolesToAllow.join(' or ')
+        message = `Found ${filteredUsers.length} users with ${allowed}`
+        if (rolesToFilter.length > 0) {
+            filtered = rolesToFilter.join(' or ')
+            message += ` but not ${filtered}`
+        }
+        message += `:\n`
         message += formatMembers(filteredUsers)
         await interaction.reply({ content: message, ephemeral: true })
     },
