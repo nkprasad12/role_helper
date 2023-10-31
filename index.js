@@ -4,7 +4,7 @@ const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 const { token } = require('./config.json');
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
 client.commands = new Collection();
 
@@ -46,6 +46,10 @@ client.on(Events.InteractionCreate, async interaction => {
 		await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
 	}
 });
+
+client.on(Events.GuildMembersChunk, async (_a, _b, data) => {
+	console.log(`New chunk: ${data.count}, ${data.index}`)
+})
 
 // Log in to Discord with your client's token
 client.login(token);

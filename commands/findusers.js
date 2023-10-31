@@ -43,6 +43,18 @@ module.exports = {
         const rolesToAllow = parseListOption(interaction, OPTION_WITH)
         const rolesToFilter = parseListOption(interaction, OPTION_WITHOUT)
 
+        await interaction.deferReply({ephemeral: true})
+
+        console.log("Fetching members")
+        try {
+            await interaction.guild.members.fetch({time: 5000000})
+        } catch (e) {
+            console.log(e)
+            console.log("Failed to fetch members")
+            // return
+        }
+
+
         const idsToFilter = new Set()
         for (const roleName of rolesToFilter) {
             role = getRole(interaction.guild, roleName)
@@ -79,6 +91,6 @@ module.exports = {
         }
         message += `:\n`
         message += formatMembers(filteredUsers)
-        await interaction.reply({ content: message, ephemeral: true })
+        await interaction.editReply(message)
     },
 }

@@ -1,21 +1,8 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 
 const OPTION_ROLE = 'role'
 const OPTION_USERS = 'users'
 
-
-function getRole(guild, roleName) {
-    return guild.roles.cache.find(
-        role => role.name.localeCompare(roleName, undefined, { sensitivity: 'base' }) === 0)
-}
-
-function formatMember(member) {
-    return `${member.displayName} [${member.user.tag}]`
-}
-
-function formatMembers(members) {
-    return members.map(formatMember).join('\n') + `\nAll Tags:\n${members.map(member => member.id).join(",")}`
-}
 
 function parseListOption(interaction, key) {
     const rawValue = interaction.options.getString(key);
@@ -37,23 +24,44 @@ module.exports = {
             option.setName(OPTION_USERS)
                 .setDescription('Users to include (separate with commas)')
                 .setRequired(true))
-        .setDescription('Allows mass adding users to a role.'),
+        .setDescription('Allows mass adding users to a role.')
+        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
 
     async execute(interaction) {
         const role = interaction.options.getRole(OPTION_ROLE)
         const usersToAdd = parseListOption(interaction, OPTION_USERS)
+
+        await interaction.deferReply({ephemeral: true})
+
+        console.log("Fetching members")
+        try {
+            await interaction.guild.members.fetch({time: 10000})
+        } catch (e) {
+            console.log(e)
+            console.log("Failed to fetch members")
+            // return
+        }
+
         const failures = []
         for (const userId of usersToAdd) {
             const user = interaction.guild.members.cache.get(userId)
+            if (user === undefined) {
+                failures.push(userId)
+                continue
+            }
             try {
               await user.roles.add(role)
-            }
-            catch (e) {
+            } catch (e) {
                 console.log(e)
                 failures.push(`${userId} (${user.displayName})`)
             }
         }
         const message = failures.length === 0 ? "Success!" : `Failed to add role to:\n${failures.join("\n")}`
-        await interaction.reply({ content: message, ephemeral: true })
+        await interaction.editReply(message)
     },
 }
+
+
+/**
+ * 
+ */
