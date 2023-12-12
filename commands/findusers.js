@@ -2,6 +2,7 @@ const { SlashCommandBuilder, SlashCommandRoleOption } = require('discord.js');
 
 const OPTION_WITH = 'with'
 const OPTION_WITHOUT = 'without'
+const OPTION_SHOW_IDS = 'showids'
 
 
 function getRole(guild, roleName) {
@@ -13,8 +14,12 @@ function formatMember(member) {
     return `${member.displayName} [${member.user.tag}]`
 }
 
-function formatMembers(members) {
-    return members.map(formatMember).join('\n') + `\nAll Tags:\n${members.map(member => member.id).join(",")}`
+function formatMembers(members, showIds) {
+    const memberList = members.map(formatMember).join('\n') + '\n';
+    if (!showIds) {
+        return memberList;
+    }
+    return `${memberList}All Tags:\n${members.map(member => member.id).join(",")}`
 }
 
 function parseListOption(interaction, key) {
@@ -37,17 +42,22 @@ module.exports = {
             option.setName(OPTION_WITHOUT)
                 .setDescription('Names of roles to include (separate with commas)')
                 .setRequired(false))
+        .addBooleanOption(option =>
+            option.setName(OPTION_SHOW_IDS)
+                .setDescription('Whether to show the numerical IDs for each user')
+                .setRequired(false))
         .setDescription('Allows finding users by role.'),
 
     async execute(interaction) {
         const rolesToAllow = parseListOption(interaction, OPTION_WITH)
         const rolesToFilter = parseListOption(interaction, OPTION_WITHOUT)
+        const showIds = interaction.options.getBoolean(OPTION_SHOW_IDS)
 
         await interaction.deferReply({ephemeral: true})
 
         console.log("Fetching members")
         try {
-            await interaction.guild.members.fetch({time: 5000000})
+            await interaction.guild.members.fetch({time: 50000})
         } catch (e) {
             console.log(e)
             console.log("Failed to fetch members")
@@ -90,7 +100,12 @@ module.exports = {
             message += ` but not ${filtered}`
         }
         message += `:\n`
-        message += formatMembers(filteredUsers)
-        await interaction.editReply(message)
+        message += formatMembers(filteredUsers, showIds)
+        try {
+            await interaction.editReply(message)
+        } catch (e) {
+            console.log(e)
+            console.log(message)
+        }
     },
 }
